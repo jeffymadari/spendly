@@ -23,6 +23,7 @@
         <div class="hero-actions">
             <a href="{{ url_for('register') }}" class="btn-primary">Start tracking free</a>
             <a href="{{ url_for('login') }}" class="btn-ghost">Sign in</a>
+            <button class="btn-watch" id="watchBtn">&#9654; See how it works</button>
         </div>
     </div>
     <div class="hero-visual">
@@ -103,4 +104,122 @@
     </div>
 </section>
 
+<!-- Video modal -->
+<div class="video-modal-overlay" id="videoModal" role="dialog" aria-modal="true" aria-label="How it works video">
+    <div class="video-modal-box">
+        <button class="video-modal-close" id="modalClose" aria-label="Close">&times;</button>
+        <div class="video-modal-frame">
+            <iframe id="videoIframe"
+                src=""
+                data-src="https://www.youtube.com/embed/dQw4w9WgXcQ?enablejsapi=1"
+                title="How Spendly works"
+                frameborder="0"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowfullscreen></iframe>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<style>
+.btn-watch {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-family: var(--font-body);
+    font-size: 0.95rem;
+    font-weight: 500;
+    color: var(--ink-muted);
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    transition: color 0.2s;
+}
+.btn-watch:hover { color: var(--ink); }
+
+.video-modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.65);
+    z-index: 500;
+    align-items: center;
+    justify-content: center;
+}
+.video-modal-overlay.is-open { display: flex; }
+
+.video-modal-box {
+    position: relative;
+    width: 90%;
+    max-width: 800px;
+    background: #000;
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    box-shadow: 0 24px 80px rgba(0, 0, 0, 0.5);
+}
+
+.video-modal-close {
+    position: absolute;
+    top: -36px;
+    right: 0;
+    background: none;
+    border: none;
+    color: #fff;
+    font-size: 2rem;
+    line-height: 1;
+    cursor: pointer;
+    padding: 0;
+    opacity: 0.8;
+    transition: opacity 0.2s;
+    z-index: 10;
+}
+.video-modal-close:hover { opacity: 1; }
+
+.video-modal-frame {
+    position: relative;
+    padding-bottom: 56.25%;
+    height: 0;
+}
+.video-modal-frame iframe {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+}
+</style>
+
+<script>
+(function () {
+    var overlay  = document.getElementById('videoModal');
+    var iframe   = document.getElementById('videoIframe');
+    var openBtn  = document.getElementById('watchBtn');
+    var closeBtn = document.getElementById('modalClose');
+
+    function openModal() {
+        iframe.src = iframe.dataset.src;
+        overlay.classList.add('is-open');
+        document.body.style.overflow = 'hidden';
+    }
+
+    function closeModal() {
+        iframe.src = '';
+        overlay.classList.remove('is-open');
+        document.body.style.overflow = '';
+    }
+
+    openBtn.addEventListener('click', openModal);
+    closeBtn.addEventListener('click', closeModal);
+
+    overlay.addEventListener('click', function (e) {
+        if (e.target === overlay) closeModal();
+    });
+
+    document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape' && overlay.classList.contains('is-open')) closeModal();
+    });
+}());
+</script>
 {% endblock %}
