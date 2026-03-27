@@ -1,0 +1,126 @@
+/* ------------------------------------------------------------------ */
+/* Hero visual — browser mock (overrides style.css mock-card styles)  */
+/* ------------------------------------------------------------------ */
+
+.hero-visual {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.mock-browser {
+    width: 100%;
+    max-width: 440px;
+    background: #f1f0ed;
+    border-radius: 14px;
+    box-shadow: 0 16px 60px rgba(0, 0, 0, 0.10);
+    overflow: hidden;
+}
+
+.mock-browser-bar {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 12px 16px;
+    background: #e8e6e1;
+}
+
+.mock-dot {
+    display: inline-block;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+}
+
+.mock-dot-red    { background: #ff5f57; }
+.mock-dot-yellow { background: #ffbd2e; }
+.mock-dot-green  { background: #28c840; }
+
+.mock-browser-body {
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    background: #f7f6f3;
+}
+
+/* ---- stat cards row ---- */
+
+.mock-stats {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+}
+
+.mock-stat-card {
+    background: #ffffff;
+    border: 1px solid #e4e1da;
+    border-radius: 10px;
+    padding: 14px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.mock-stat-label {
+    font-size: 0.72rem;
+    color: #6b6b6b;
+    font-weight: 400;
+}
+
+.mock-stat-value {
+    font-size: 1.35rem;
+    font-weight: 600;
+    color: #0f0f0f;
+    line-height: 1.2;
+}
+
+.mock-stat-sub {
+    font-size: 0.72rem;
+    color: #6b6b6b;
+}
+
+.mock-sub-danger { color: #e05252; }
+.mock-sub-ok     { color: #2e9e60; }
+
+/* ---- bars card ---- */
+
+.mock-bars-card {
+    background: #ffffff;
+    border: 1px solid #e4e1da;
+    border-radius: 10px;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.mock-bar-row {
+    display: grid;
+    grid-template-columns: 52px 1fr;
+    align-items: center;
+    gap: 12px;
+}
+
+.mock-cat {
+    font-size: 0.8rem;
+    font-weight: 500;
+    color: #2d2d2d;
+}
+
+.mock-bar-track {
+    height: 9px;
+    background: #eeebe4;
+    border-radius: 999px;
+    overflow: hidden;
+}
+
+.mock-bar {
+    height: 100%;
+    border-radius: 999px;
+    transition: width 0.6s ease;
+}
+
+.mock-bar-food   { background: #f0a500; }
+.mock-bar-travel { background: #4a90d9; }
+.mock-bar-bills  { background: #9b6dcc; }
