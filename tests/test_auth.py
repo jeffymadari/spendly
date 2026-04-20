@@ -57,3 +57,32 @@ class TestLoginPost:
             "password": "wrongpassword",
         }, follow_redirects=True)
         assert test_user["email"].encode() in response.data
+
+
+class TestLogout:
+    def _login(self, client, test_user):
+        client.post("/login", data={
+            "email": test_user["email"],
+            "password": test_user["password"],
+        })
+
+    def test_logout_redirects_to_landing(self, client, test_user):
+        self._login(client, test_user)
+        response = client.get("/logout")
+        assert response.status_code == 302
+        assert urlparse(response.location).path == "/"
+
+    def test_logout_clears_user_id_from_session(self, client, test_user):
+        self._login(client, test_user)
+        with client.session_transaction() as sess:
+            assert "user_id" in sess
+
+        client.get("/logout")
+
+        with client.session_transaction() as sess:
+            assert "user_id" not in sess
+
+    def test_logout_without_prior_login_still_redirects(self, client):
+        response = client.get("/logout")
+        assert response.status_code == 302
+        assert urlparse(response.location).path == "/"
