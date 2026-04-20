@@ -1,72 +1,53 @@
 # Spec: Login and Logout
 
 ## Overview
-Wire up the login and logout flows so registered users can authenticate and end their session. The `/login` route currently only renders a static form and `/logout` is a placeholder string. This step adds `POST /login` with credential verification and session creation, implements `GET /logout` to clear the session, creates a minimal dashboard landing page for authenticated users, and updates the navbar to reflect login state.
+This feature implements user authentication for Spendly. It converts the `/login` stub into a functional POST handler that verifies credentials against the database, stores the authenticated user's ID in the session, and redirects to the dashboard (or a suitable landing page). It also implements the `/logout` stub, which clears the session and redirects to the landing page. After this step, the app can distinguish logged-in users from guests, which is a prerequisite for all expense features.
 
 ## Depends on
-- Step 01 (Database Setup) — requires the `users` table and `get_db()` to be in place.
-- Step 02 (Registration) — requires the password hashing scheme (`werkzeug`) and session variables (`user_id`, `user_name`) established there.
+- Step 01 — Database Setup (`users` table must exist)
+- Step 02 — Registration (`create_user` and password hashing must be in place; a user must exist to log in against)
 
 ## Routes
-- `GET /login` — render the login form — public
-- `POST /login` — verify credentials, start session, redirect to dashboard — public
-- `GET /logout` — clear session, redirect to landing — logged-in
-- `GET /dashboard` — render the dashboard page — logged-in
+- `GET /login` — render login form — public
+- `POST /login` — validate credentials, set session, redirect — public
+- `GET /logout` — clear session, redirect to `/` — public (no login required to log out)
 
 ## Database changes
-No database changes. The existing `users` table with `id`, `email`, and `password_hash` columns is sufficient.
+No database changes. The `users` table created in Step 01 already stores `email` and `password_hash`.
 
 ## Templates
-- **Modify:** `templates/login.html`
-  - Repopulate `email` field on validation error: add `value="{{ email or '' }}"` to the email input
-- **Modify:** `templates/base.html`
-  - Update `.nav-links` to show conditional nav based on `session`:
-    - Logged-out: "Sign in" + "Get started" (current behaviour)
-    - Logged-in: user name display + "Dashboard" link + "Sign out" link
-- **Create:** `templates/dashboard.html`
-  - Extends `base.html`
-  - Shows a welcome heading with `{{ session['user_name'] }}`
-  - Placeholder message: expenses list coming in a later step
+- **Modify:** `templates/login.html` — add a POST form with `email` and `password` fields, flash message display, and a link to `/register`
 
 ## Files to change
-- `app.py`
-  - Convert `GET /login` to handle both GET and POST methods
-  - Implement `POST /login`: read email + password, look up user, verify hash, set session, redirect to dashboard
-  - Implement `GET /logout`: clear session, redirect to landing
-  - Implement `GET /dashboard`: require login (redirect to `/login` if no session), render `dashboard.html`
-  - Import `check_password_hash` from `werkzeug.security`
-- `templates/login.html` — repopulate email on error
-- `templates/base.html` — conditional nav links based on `session`
+- `app.py` — implement `login()` as GET+POST handler and implement `logout()`
+- `database/db.py` — add `get_user_by_email(email)` helper that returns a user row or `None`
+- `templates/login.html` — add POST form and flash display
 
 ## Files to create
-- `templates/dashboard.html` — minimal authenticated landing page
+No new files.
 
 ## New dependencies
-No new dependencies. Uses `werkzeug.security.check_password_hash` (already installed with werkzeug).
+No new dependencies. `werkzeug.security.check_password_hash` is already available via the existing `werkzeug` install.
 
 ## Rules for implementation
-- No SQLAlchemy or ORMs — raw `sqlite3` via `get_db()` only
-- Parameterised queries only — no string formatting in SQL
+- No SQLAlchemy or ORMs — use raw `sqlite3` via `get_db()`
+- Parameterised queries only — never use f-strings in SQL
 - Passwords verified with `werkzeug.security.check_password_hash`
+- Session key for the logged-in user must be `session["user_id"]` (integer)
+- Use `flask.session` — do not roll a custom session mechanism
 - Use CSS variables — never hardcode hex values
 - All templates extend `base.html`
-- Login error message must be intentionally vague: "Invalid email or password." — never reveal which field is wrong
-- On successful login: set `session['user_id']` and `session['user_name']`, then redirect to `/dashboard`
-- On failed login: re-render `login.html` with `error` message and preserved `email` value
-- Logout must use `session.clear()` (not individual key deletion), then redirect to `url_for('landing')`
-- Dashboard must guard against unauthenticated access: `if 'user_id' not in session: return redirect(url_for('login'))`
-- After registration (Step 02) the user is redirected to `/login` — this step does not change that behaviour; the user must log in manually after registering
+- Use `url_for()` for every internal link — never hardcode paths
+- On failed login show a generic flash error ("Invalid email or password.") — do not reveal which field was wrong
+- After successful login redirect to `url_for("landing")` until a dashboard route exists
+- `logout()` must call `session.clear()` then redirect to `url_for("landing")`
+- `get_user_by_email` belongs in `database/db.py`, not inline in the route
 
 ## Definition of done
-- [ ] `GET /login` renders the form correctly
-- [ ] Submitting an email that does not exist shows "Invalid email or password." without crashing
-- [ ] Submitting a correct email with the wrong password shows "Invalid email or password."
-- [ ] Submitting valid credentials sets `session['user_id']` and redirects to `/dashboard`
-- [ ] `GET /dashboard` is accessible after login and shows the user's name
-- [ ] `GET /dashboard` redirects unauthenticated visitors to `/login`
-- [ ] `GET /logout` clears the session and redirects to the landing page
-- [ ] After logout, visiting `/dashboard` redirects back to `/login`
-- [ ] Navbar shows "Dashboard" and "Sign out" when a user is logged in
-- [ ] Navbar shows "Sign in" and "Get started" when no user is logged in
-- [ ] Email field is repopulated when the login form is re-shown after an error
-- [ ] App starts without errors after all changes
+- [ ] Visiting `GET /login` renders the login form with email and password fields
+- [ ] Submitting the form with valid credentials (e.g. demo@spendly.com / demo123) sets `session["user_id"]` and redirects to `/`
+- [ ] Submitting with a wrong password shows "Invalid email or password." flash and stays on the login page
+- [ ] Submitting with an unregistered email shows the same generic error flash
+- [ ] Visiting `GET /logout` clears the session and redirects to `/`
+- [ ] After logout, `session["user_id"]` is no longer present
+- [ ] The `/logout` route no longer returns the raw stub string
