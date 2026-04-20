@@ -53,11 +53,13 @@ def register():
     finally:
         conn.close()
 
-    return redirect(url_for("login"))
+    return redirect(url_for("profile"))
 
 
 @app.route("/login", methods=["GET", "POST"])
 def login():
+    if session.get("user_id"):
+        return redirect(url_for("profile"))
     if request.method == "GET":
         return render_template("login.html")
 
@@ -70,7 +72,7 @@ def login():
 
     session["user_id"] = user["id"]
     session["user_name"] = user["name"]
-    return redirect(url_for("landing"))
+    return redirect(url_for("profile"))
 
 
 @app.route("/privacy")
@@ -90,7 +92,50 @@ def logout():
 
 @app.route("/profile")
 def profile():
-    return "Profile page — coming in Step 4"
+    if not session.get("user_id"):
+        return redirect(url_for("login"))
+
+    user = {
+        "name": "Alex Rivera",
+        "email": "alex@example.com",
+        "member_since": "January 2025",
+        "initials": "AR",
+    }
+
+    stats = {
+        "total_spent": 268.63,
+        "transaction_count": 8,
+        "top_category": "Bills",
+    }
+
+    expenses = [
+        {"date": "Apr 13, 2026", "description": "Miscellaneous",         "category": "Other",         "amount": 20.00},
+        {"date": "Apr 11, 2026", "description": "Groceries",             "category": "Food",          "amount": 8.75},
+        {"date": "Apr 09, 2026", "description": "Clothing",              "category": "Shopping",      "amount": 62.40},
+        {"date": "Apr 07, 2026", "description": "Streaming subscription","category": "Entertainment", "amount": 14.99},
+        {"date": "Apr 05, 2026", "description": "Pharmacy",              "category": "Health",        "amount": 25.00},
+        {"date": "Apr 03, 2026", "description": "Internet bill",         "category": "Bills",         "amount": 89.99},
+        {"date": "Apr 02, 2026", "description": "Monthly bus pass",      "category": "Transport",     "amount": 35.00},
+        {"date": "Apr 01, 2026", "description": "Lunch at cafe",         "category": "Food",          "amount": 12.50},
+    ]
+
+    category_breakdown = [
+        {"name": "Bills",         "amount": 89.99, "pct": 33},
+        {"name": "Shopping",      "amount": 62.40, "pct": 23},
+        {"name": "Transport",     "amount": 35.00, "pct": 13},
+        {"name": "Health",        "amount": 25.00, "pct":  9},
+        {"name": "Food",          "amount": 21.25, "pct":  8},
+        {"name": "Entertainment", "amount": 14.99, "pct":  6},
+        {"name": "Other",         "amount": 20.00, "pct":  7},
+    ]
+
+    return render_template(
+        "profile.html",
+        user=user,
+        stats=stats,
+        expenses=expenses,
+        category_breakdown=category_breakdown,
+    )
 
 
 @app.route("/expenses/add")
