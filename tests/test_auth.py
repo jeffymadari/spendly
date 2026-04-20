@@ -14,3 +14,46 @@ class TestGetUserByEmail:
         with app.app_context():
             user = db_module.get_user_by_email("nobody@example.com")
         assert user is None
+
+
+class TestLoginPost:
+    def test_valid_credentials_set_session_and_redirect_to_landing(self, client, test_user):
+        response = client.post("/login", data={
+            "email": test_user["email"],
+            "password": test_user["password"],
+        })
+        assert response.status_code == 302
+        assert urlparse(response.location).path == "/"
+        with client.session_transaction() as sess:
+            assert sess["user_id"] is not None
+
+    def test_wrong_password_shows_generic_error(self, client, test_user):
+        response = client.post("/login", data={
+            "email": test_user["email"],
+            "password": "wrongpassword",
+        }, follow_redirects=True)
+        assert response.status_code == 200
+        assert b"Invalid email or password." in response.data
+
+    def test_wrong_password_does_not_set_session(self, client, test_user):
+        client.post("/login", data={
+            "email": test_user["email"],
+            "password": "wrongpassword",
+        })
+        with client.session_transaction() as sess:
+            assert "user_id" not in sess
+
+    def test_unknown_email_shows_generic_error(self, client):
+        response = client.post("/login", data={
+            "email": "nobody@example.com",
+            "password": "anypassword",
+        }, follow_redirects=True)
+        assert response.status_code == 200
+        assert b"Invalid email or password." in response.data
+
+    def test_error_repopulates_email_field(self, client, test_user):
+        response = client.post("/login", data={
+            "email": test_user["email"],
+            "password": "wrongpassword",
+        }, follow_redirects=True)
+        assert test_user["email"].encode() in response.data
