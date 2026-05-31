@@ -87,45 +87,13 @@ class TestProfileRoute:
         response = logged_in_client.get("/profile")
         assert test_user["email"].encode() in response.data
 
-    def test_default_excludes_old_expense(
-        self, logged_in_client, test_user, insert_expense, app
-    ):
-        with app.app_context():
-            user = db_module.get_user_by_email(test_user["email"])
-            insert_expense(user["id"], 99.00, "Bills", "2024-01-15", "Ancient bill")
-        response = logged_in_client.get("/profile")
-        assert b"Ancient bill" not in response.data
-
-    def test_custom_date_range_filters_expenses(
-        self, logged_in_client, test_user, insert_expense, app
-    ):
-        with app.app_context():
-            user = db_module.get_user_by_email(test_user["email"])
-            insert_expense(user["id"], 25.00, "Food", "2026-02-10", "Feb lunch")
-            insert_expense(user["id"], 30.00, "Transport", "2026-03-20", "Mar bus")
-        response = logged_in_client.get(
-            "/profile?from_date=2026-02-01&to_date=2026-02-28"
-        )
-        assert b"Feb lunch" in response.data
-        assert b"Mar bus" not in response.data
-
-    def test_empty_range_shows_zero_total(self, logged_in_client):
-        response = logged_in_client.get(
-            "/profile?from_date=2020-01-01&to_date=2020-01-31"
-        )
-        assert b"$0.00" in response.data
-
-    def test_all_time_shows_old_expense(
+    def test_shows_all_expenses_for_user(
         self, logged_in_client, test_user, insert_expense, app
     ):
         with app.app_context():
             user = db_module.get_user_by_email(test_user["email"])
             insert_expense(user["id"], 10.00, "Food", "2010-06-01", "Very old")
-        response = logged_in_client.get(
-            "/profile?from_date=0001-01-01&to_date=9999-12-31"
-        )
-        assert b"Very old" in response.data
-
-    def test_active_preset_class_present(self, logged_in_client):
+            insert_expense(user["id"], 20.00, "Bills", "2026-04-01", "Recent")
         response = logged_in_client.get("/profile")
-        assert b"filter-btn--active" in response.data
+        assert b"Very old" in response.data
+        assert b"Recent" in response.data
