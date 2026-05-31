@@ -93,14 +93,20 @@ def get_category_breakdown(user_id):
     return result
 
 
-def get_filtered_stats(user_id, from_date, to_date):
+def get_filtered_stats(user_id, date_from=None, date_to=None):
     conn = get_db()
     try:
-        rows = conn.execute(
-            "SELECT amount, category FROM expenses"
-            " WHERE user_id = ? AND date BETWEEN ? AND ?",
-            (user_id, from_date, to_date),
-        ).fetchall()
+        if date_from is not None and date_to is not None:
+            rows = conn.execute(
+                "SELECT amount, category FROM expenses"
+                " WHERE user_id = ? AND date BETWEEN ? AND ?",
+                (user_id, date_from, date_to),
+            ).fetchall()
+        else:
+            rows = conn.execute(
+                "SELECT amount, category FROM expenses WHERE user_id = ?",
+                (user_id,),
+            ).fetchall()
     finally:
         conn.close()
     if not rows:
@@ -117,14 +123,21 @@ def get_filtered_stats(user_id, from_date, to_date):
     }
 
 
-def get_filtered_transactions(user_id, from_date, to_date):
+def get_filtered_transactions(user_id, date_from=None, date_to=None):
     conn = get_db()
     try:
-        rows = conn.execute(
-            "SELECT date, description, category, amount FROM expenses"
-            " WHERE user_id = ? AND date BETWEEN ? AND ? ORDER BY date DESC",
-            (user_id, from_date, to_date),
-        ).fetchall()
+        if date_from is not None and date_to is not None:
+            rows = conn.execute(
+                "SELECT date, description, category, amount FROM expenses"
+                " WHERE user_id = ? AND date BETWEEN ? AND ? ORDER BY date DESC",
+                (user_id, date_from, date_to),
+            ).fetchall()
+        else:
+            rows = conn.execute(
+                "SELECT date, description, category, amount FROM expenses"
+                " WHERE user_id = ? ORDER BY date DESC",
+                (user_id,),
+            ).fetchall()
     finally:
         conn.close()
     result = []
@@ -138,15 +151,22 @@ def get_filtered_transactions(user_id, from_date, to_date):
     return result
 
 
-def get_filtered_breakdown(user_id, from_date, to_date):
+def get_filtered_breakdown(user_id, date_from=None, date_to=None):
     conn = get_db()
     try:
-        rows = conn.execute(
-            "SELECT category, SUM(amount) AS total FROM expenses"
-            " WHERE user_id = ? AND date BETWEEN ? AND ?"
-            " GROUP BY category ORDER BY total DESC",
-            (user_id, from_date, to_date),
-        ).fetchall()
+        if date_from is not None and date_to is not None:
+            rows = conn.execute(
+                "SELECT category, SUM(amount) AS total FROM expenses"
+                " WHERE user_id = ? AND date BETWEEN ? AND ?"
+                " GROUP BY category ORDER BY total DESC",
+                (user_id, date_from, date_to),
+            ).fetchall()
+        else:
+            rows = conn.execute(
+                "SELECT category, SUM(amount) AS total FROM expenses"
+                " WHERE user_id = ? GROUP BY category ORDER BY total DESC",
+                (user_id,),
+            ).fetchall()
     finally:
         conn.close()
     if not rows:

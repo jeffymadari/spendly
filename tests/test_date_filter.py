@@ -125,3 +125,30 @@ class TestProfileDateFilter:
     def test_active_preset_class_in_html(self, logged_in_client):
         response = logged_in_client.get("/profile")
         assert b"filter-btn--active" in response.data
+
+
+class TestFilteredHelpersWithNoneParams:
+    def test_stats_with_none_returns_all(self, app, test_user, insert_expense):
+        with app.app_context():
+            user = db_module.get_user_by_email(test_user["email"])
+            insert_expense(user["id"], 10.00, "Food",  "2020-01-01", "Old")
+            insert_expense(user["id"], 20.00, "Bills", "2026-05-01", "New")
+            result = queries.get_filtered_stats(user["id"], None, None)
+        assert result["transaction_count"] == 2
+        assert result["total_spent"] == pytest.approx(30.00)
+
+    def test_transactions_with_none_returns_all(self, app, test_user, insert_expense):
+        with app.app_context():
+            user = db_module.get_user_by_email(test_user["email"])
+            insert_expense(user["id"], 10.00, "Food",  "2020-01-01", "Old")
+            insert_expense(user["id"], 20.00, "Bills", "2026-05-01", "New")
+            result = queries.get_filtered_transactions(user["id"], None, None)
+        assert len(result) == 2
+
+    def test_breakdown_with_none_returns_all(self, app, test_user, insert_expense):
+        with app.app_context():
+            user = db_module.get_user_by_email(test_user["email"])
+            insert_expense(user["id"], 50.00, "Food",  "2020-01-01", "Old")
+            insert_expense(user["id"], 50.00, "Bills", "2026-05-01", "New")
+            result = queries.get_filtered_breakdown(user["id"], None, None)
+        assert len(result) == 2
