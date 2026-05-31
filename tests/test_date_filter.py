@@ -83,14 +83,14 @@ class TestGetFilteredBreakdown:
 
 
 class TestProfileDateFilter:
-    def test_default_shows_current_month_only(
+    def test_default_shows_all_expenses(
         self, logged_in_client, test_user, insert_expense, app
     ):
         with app.app_context():
             user = db_module.get_user_by_email(test_user["email"])
             insert_expense(user["id"], 99.00, "Bills", "2024-01-15", "Ancient")
         response = logged_in_client.get("/profile")
-        assert b"Ancient" not in response.data
+        assert b"Ancient" in response.data
 
     def test_custom_range_filters_correctly(
         self, logged_in_client, test_user, insert_expense, app
@@ -100,7 +100,7 @@ class TestProfileDateFilter:
             insert_expense(user["id"], 25.00, "Food",      "2026-02-10", "Feb lunch")
             insert_expense(user["id"], 30.00, "Transport", "2026-03-20", "Mar bus")
         response = logged_in_client.get(
-            "/profile?from_date=2026-02-01&to_date=2026-02-28"
+            "/profile?date_from=2026-02-01&date_to=2026-02-28"
         )
         assert b"Feb lunch" in response.data
         assert b"Mar bus" not in response.data
@@ -111,20 +111,37 @@ class TestProfileDateFilter:
         with app.app_context():
             user = db_module.get_user_by_email(test_user["email"])
             insert_expense(user["id"], 10.00, "Food", "2010-01-01", "Very old")
-        response = logged_in_client.get(
-            "/profile?from_date=0001-01-01&to_date=9999-12-31"
-        )
+        response = logged_in_client.get("/profile")
         assert b"Very old" in response.data
 
     def test_empty_range_shows_zero_stats(self, logged_in_client):
         response = logged_in_client.get(
-            "/profile?from_date=2020-01-01&to_date=2020-01-31"
+            "/profile?date_from=2020-01-01&date_to=2020-01-31"
         )
         assert "₹0.00".encode() in response.data
 
     def test_active_preset_class_in_html(self, logged_in_client):
         response = logged_in_client.get("/profile")
         assert b"filter-btn--active" in response.data
+
+    def test_malformed_date_falls_back_to_all_time(
+        self, logged_in_client, test_user, insert_expense, app
+    ):
+        with app.app_context():
+            user = db_module.get_user_by_email(test_user["email"])
+            insert_expense(user["id"], 15.00, "Food", "2026-01-01", "Visible")
+        response = logged_in_client.get(
+            "/profile?date_from=not-a-date&date_to=also-bad"
+        )
+        assert response.status_code == 200
+        assert b"Visible" in response.data
+
+    def test_inverted_range_flashes_error(self, logged_in_client):
+        response = logged_in_client.get(
+            "/profile?date_from=2026-05-01&date_to=2026-04-01"
+        )
+        assert response.status_code == 200
+        assert b"Start date must be before end date" in response.data
 
 
 class TestFilteredHelpersWithNoneParams:

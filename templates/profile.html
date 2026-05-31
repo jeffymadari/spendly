@@ -26,19 +26,30 @@
 
     <!-- ② Date filter -->
     <div class="filter-card profile-card">
+      {% with messages = get_flashed_messages() %}
+        {% if messages %}
+          {% for msg in messages %}
+            <p class="flash-error">{{ msg }}</p>
+          {% endfor %}
+        {% endif %}
+      {% endwith %}
       <div class="filter-bar">
         <span class="filter-label">Period</span>
-        <a href="{{ url_for('profile', from_date=presets['this_month'][0], to_date=presets['this_month'][1]) }}"
+        <a href="{{ url_for('profile') }}"
+           class="filter-btn{% if active_preset == 'all_time' %} filter-btn--active{% endif %}">
+          All Time
+        </a>
+        <a href="{{ url_for('profile', date_from=presets['this_month'][0], date_to=presets['this_month'][1]) }}"
            class="filter-btn{% if active_preset == 'this_month' %} filter-btn--active{% endif %}">
           This Month
         </a>
-        <a href="{{ url_for('profile', from_date=presets['last_3_months'][0], to_date=presets['last_3_months'][1]) }}"
+        <a href="{{ url_for('profile', date_from=presets['last_3_months'][0], date_to=presets['last_3_months'][1]) }}"
            class="filter-btn{% if active_preset == 'last_3_months' %} filter-btn--active{% endif %}">
           Last 3 Months
         </a>
-        <a href="{{ url_for('profile', from_date=presets['all_time'][0], to_date=presets['all_time'][1]) }}"
-           class="filter-btn{% if active_preset == 'all_time' %} filter-btn--active{% endif %}">
-          All Time
+        <a href="{{ url_for('profile', date_from=presets['last_6_months'][0], date_to=presets['last_6_months'][1]) }}"
+           class="filter-btn{% if active_preset == 'last_6_months' %} filter-btn--active{% endif %}">
+          Last 6 Months
         </a>
         <button id="toggle-custom" type="button"
                 class="filter-btn{% if active_preset == 'custom' %} filter-btn--active{% endif %}">
@@ -48,11 +59,11 @@
       <div id="custom-range"
            class="filter-custom{% if active_preset != 'custom' %} filter-custom--hidden{% endif %}">
         <form method="GET" action="{{ url_for('profile') }}" class="custom-range-form">
-          <input type="date" name="from_date"
-                 value="{{ from_date if active_preset == 'custom' else '' }}">
+          <input type="date" name="date_from"
+                 value="{{ date_from if active_preset == 'custom' else '' }}">
           <span class="custom-range-sep">to</span>
-          <input type="date" name="to_date"
-                 value="{{ to_date if active_preset == 'custom' else '' }}">
+          <input type="date" name="date_to"
+                 value="{{ date_to if active_preset == 'custom' else '' }}">
           <button type="submit" class="btn-apply">Apply</button>
         </form>
       </div>

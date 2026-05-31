@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, session, redirect, url_for
+from flask import Flask, render_template, request, session, redirect, url_for, flash
 import sqlite3
 import datetime
 import calendar
@@ -101,15 +101,23 @@ def logout():
 def _compute_preset_dates(today):
     first_of_month = today.replace(day=1)
     last_of_month = today.replace(day=calendar.monthrange(today.year, today.month)[1])
-    m, y = today.month - 2, today.year
-    if m <= 0:
-        m += 12
-        y -= 1
-    three_months_start = datetime.date(y, m, 1)
+
+    m3, y3 = today.month - 2, today.year
+    if m3 <= 0:
+        m3 += 12
+        y3 -= 1
+    three_months_start = datetime.date(y3, m3, 1)
+
+    m6, y6 = today.month - 5, today.year
+    if m6 <= 0:
+        m6 += 12
+        y6 -= 1
+    six_months_start = datetime.date(y6, m6, 1)
+
     return {
         "this_month":    (first_of_month.isoformat(), last_of_month.isoformat()),
         "last_3_months": (three_months_start.isoformat(), last_of_month.isoformat()),
-        "all_time":      ("0001-01-01", "9999-12-31"),
+        "last_6_months": (six_months_start.isoformat(), last_of_month.isoformat()),
     }
 
 
@@ -121,16 +129,39 @@ def profile():
     today = datetime.date.today()
     presets = _compute_preset_dates(today)
 
-    from_date = request.args.get("from_date", presets["this_month"][0])
-    to_date   = request.args.get("to_date",   presets["this_month"][1])
+    raw_from = request.args.get("date_from", "")
+    raw_to = request.args.get("date_to", "")
 
-    current = (from_date, to_date)
-    if current == presets["this_month"]:
-        active_preset = "this_month"
-    elif current == presets["last_3_months"]:
-        active_preset = "last_3_months"
-    elif current == presets["all_time"]:
+    date_from = None
+    date_to = None
+
+    if raw_from:
+        try:
+            datetime.datetime.strptime(raw_from, "%Y-%m-%d")
+            date_from = raw_from
+        except ValueError:
+            pass
+
+    if raw_to:
+        try:
+            datetime.datetime.strptime(raw_to, "%Y-%m-%d")
+            date_to = raw_to
+        except ValueError:
+            pass
+
+    if date_from and date_to and date_from > date_to:
+        flash("Start date must be before end date.")
+        date_from = None
+        date_to = None
+
+    if date_from is None and date_to is None:
         active_preset = "all_time"
+    elif (date_from, date_to) == presets["this_month"]:
+        active_preset = "this_month"
+    elif (date_from, date_to) == presets["last_3_months"]:
+        active_preset = "last_3_months"
+    elif (date_from, date_to) == presets["last_6_months"]:
+        active_preset = "last_6_months"
     else:
         active_preset = "custom"
 
@@ -143,11 +174,11 @@ def profile():
     return render_template(
         "profile.html",
         user=user,
-        stats=get_filtered_stats(session["user_id"], from_date, to_date),
-        expenses=get_filtered_transactions(session["user_id"], from_date, to_date),
-        category_breakdown=get_filtered_breakdown(session["user_id"], from_date, to_date),
-        from_date=from_date,
-        to_date=to_date,
+        stats=get_filtered_stats(session["user_id"], date_from, date_to),
+        expenses=get_filtered_transactions(session["user_id"], date_from, date_to),
+        category_breakdown=get_filtered_breakdown(session["user_id"], date_from, date_to),
+        date_from=date_from,
+        date_to=date_to,
         active_preset=active_preset,
         presets=presets,
     )
