@@ -179,7 +179,9 @@ class TestProfileRouteBackendConnection:
             user = db_module.get_user_by_email(test_user["email"])
             insert_expense(user["id"], 50.00, "Bills", "2026-04-01", "Internet")
             insert_expense(user["id"], 30.00, "Food",  "2026-04-02", "Lunch")
-        response = logged_in_client.get("/profile")
+        response = logged_in_client.get(
+            "/profile?from_date=0001-01-01&to_date=9999-12-31"
+        )
         assert "₹80.00".encode() in response.data
         assert b"Bills" in response.data
 

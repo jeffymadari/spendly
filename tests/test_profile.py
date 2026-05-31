@@ -94,6 +94,8 @@ class TestProfileRoute:
             user = db_module.get_user_by_email(test_user["email"])
             insert_expense(user["id"], 10.00, "Food", "2010-06-01", "Very old")
             insert_expense(user["id"], 20.00, "Bills", "2026-04-01", "Recent")
-        response = logged_in_client.get("/profile")
+        response = logged_in_client.get(
+            "/profile?from_date=0001-01-01&to_date=9999-12-31"
+        )
         assert b"Very old" in response.data
         assert b"Recent" in response.data
