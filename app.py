@@ -1,7 +1,14 @@
 from flask import Flask, render_template, request, session, redirect, url_for
 import sqlite3
+import datetime
+import calendar
 from database.db import get_db, init_db, seed_db, get_user_by_email
-from database.queries import get_user_by_id, get_summary_stats, get_recent_transactions, get_category_breakdown
+from database.queries import (
+    get_user_by_id,
+    get_filtered_stats,
+    get_filtered_transactions,
+    get_filtered_breakdown,
+)
 from werkzeug.security import generate_password_hash, check_password_hash
 
 app = Flask(__name__)
@@ -91,10 +98,41 @@ def logout():
     return redirect(url_for("landing"))
 
 
+def _compute_preset_dates(today):
+    first_of_month = today.replace(day=1)
+    last_of_month = today.replace(day=calendar.monthrange(today.year, today.month)[1])
+    m, y = today.month - 2, today.year
+    if m <= 0:
+        m += 12
+        y -= 1
+    three_months_start = datetime.date(y, m, 1)
+    return {
+        "this_month":    (first_of_month.isoformat(), last_of_month.isoformat()),
+        "last_3_months": (three_months_start.isoformat(), last_of_month.isoformat()),
+        "all_time":      ("0001-01-01", "9999-12-31"),
+    }
+
+
 @app.route("/profile")
 def profile():
     if not session.get("user_id"):
         return redirect(url_for("login"))
+
+    today = datetime.date.today()
+    presets = _compute_preset_dates(today)
+
+    from_date = request.args.get("from_date", presets["this_month"][0])
+    to_date   = request.args.get("to_date",   presets["this_month"][1])
+
+    current = (from_date, to_date)
+    if current == presets["this_month"]:
+        active_preset = "this_month"
+    elif current == presets["last_3_months"]:
+        active_preset = "last_3_months"
+    elif current == presets["all_time"]:
+        active_preset = "all_time"
+    else:
+        active_preset = "custom"
 
     user_data = get_user_by_id(session["user_id"])
     user = {
@@ -105,9 +143,13 @@ def profile():
     return render_template(
         "profile.html",
         user=user,
-        stats=get_summary_stats(session["user_id"]),
-        expenses=get_recent_transactions(session["user_id"]),
-        category_breakdown=get_category_breakdown(session["user_id"]),
+        stats=get_filtered_stats(session["user_id"], from_date, to_date),
+        expenses=get_filtered_transactions(session["user_id"], from_date, to_date),
+        category_breakdown=get_filtered_breakdown(session["user_id"], from_date, to_date),
+        from_date=from_date,
+        to_date=to_date,
+        active_preset=active_preset,
+        presets=presets,
     )
 
 
