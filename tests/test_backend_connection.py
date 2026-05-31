@@ -140,3 +140,50 @@ class TestGetCategoryBreakdown:
             user = db_module.get_user_by_email(test_user["email"])
             result = queries.get_category_breakdown(user["id"])
         assert result == []
+
+
+# ------------------------------------------------------------------ #
+# /profile route integration                                           #
+# ------------------------------------------------------------------ #
+
+class TestProfileRouteBackendConnection:
+    def test_unauthenticated_redirects_to_login(self, client):
+        response = client.get("/profile")
+        assert response.status_code == 302
+        assert "/login" in response.location
+
+    def test_authenticated_returns_200(self, logged_in_client):
+        response = logged_in_client.get("/profile")
+        assert response.status_code == 200
+
+    def test_shows_real_user_name(self, logged_in_client, test_user):
+        response = logged_in_client.get("/profile")
+        assert test_user["name"].encode() in response.data
+
+    def test_shows_real_user_email(self, logged_in_client, test_user):
+        response = logged_in_client.get("/profile")
+        assert test_user["email"].encode() in response.data
+
+    def test_shows_rupee_symbol(self, logged_in_client):
+        response = logged_in_client.get("/profile")
+        assert "₹".encode() in response.data
+
+    def test_shows_zero_total_for_new_user(self, logged_in_client):
+        response = logged_in_client.get("/profile")
+        assert "₹0.00".encode() in response.data
+
+    def test_stats_reflect_real_expenses(
+        self, logged_in_client, test_user, insert_expense, app
+    ):
+        with app.app_context():
+            user = db_module.get_user_by_email(test_user["email"])
+            insert_expense(user["id"], 50.00, "Bills", "2026-04-01", "Internet")
+            insert_expense(user["id"], 30.00, "Food",  "2026-04-02", "Lunch")
+        response = logged_in_client.get("/profile")
+        assert "₹80.00".encode() in response.data
+        assert b"Bills" in response.data
+
+    def test_empty_state_no_crash(self, logged_in_client):
+        response = logged_in_client.get("/profile")
+        assert response.status_code == 200
+        assert b"0" in response.data
