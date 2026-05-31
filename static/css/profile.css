@@ -313,12 +313,24 @@
 /* Date filter bar                                                      */
 /* ------------------------------------------------------------------ */
 
+.filter-card {
+  padding: 1rem 1.5rem;
+}
+
 .filter-bar {
   display: flex;
   align-items: center;
   gap: 0.5rem;
   flex-wrap: wrap;
-  margin-bottom: 1.5rem;
+}
+
+.filter-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--ink-muted);
+  margin-right: 0.25rem;
 }
 
 .filter-btn {
@@ -351,7 +363,7 @@
 }
 
 .filter-custom {
-  margin-bottom: 1.25rem;
+  margin-top: 0.75rem;
 }
 
 .custom-range-form {
