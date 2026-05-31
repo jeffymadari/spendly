@@ -78,3 +78,27 @@ def seed_db():
 
     conn.commit()
     conn.close()
+
+
+def get_user_by_id(user_id):
+    conn = get_db()
+    try:
+        return conn.execute(
+            "SELECT * FROM users WHERE id = ?", (user_id,)
+        ).fetchone()
+    finally:
+        conn.close()
+
+
+def get_expenses_for_user(user_id, from_date, to_date):
+    conn = get_db()
+    try:
+        rows = conn.execute(
+            "SELECT * FROM expenses"
+            " WHERE user_id = ? AND date BETWEEN ? AND ?"
+            " ORDER BY date DESC",
+            (user_id, from_date, to_date),
+        ).fetchall()
+        return [dict(row) for row in rows]
+    finally:
+        conn.close()
