@@ -4,12 +4,12 @@ import database.queries as queries
 from app import app as flask_app
 
 
-class TestGetFilteredStats:
+class TestGetSummaryStats:
     def test_includes_expenses_in_range(self, app, test_user, insert_expense):
         with app.app_context():
             user = db_module.get_user_by_email(test_user["email"])
             insert_expense(user["id"], 50.00, "Bills", "2026-04-10", "In range")
-            result = queries.get_filtered_stats(user["id"], "2026-04-01", "2026-04-30")
+            result = queries.get_summary_stats(user["id"], "2026-04-01", "2026-04-30")
         assert result["total_spent"] == pytest.approx(50.00)
         assert result["transaction_count"] == 1
         assert result["top_category"] == "Bills"
@@ -18,17 +18,17 @@ class TestGetFilteredStats:
         with app.app_context():
             user = db_module.get_user_by_email(test_user["email"])
             insert_expense(user["id"], 50.00, "Bills", "2026-03-15", "Out of range")
-            result = queries.get_filtered_stats(user["id"], "2026-04-01", "2026-04-30")
+            result = queries.get_summary_stats(user["id"], "2026-04-01", "2026-04-30")
         assert result == {"total_spent": 0, "transaction_count": 0, "top_category": "—"}
 
     def test_returns_zeros_when_no_expenses_in_range(self, app, test_user):
         with app.app_context():
             user = db_module.get_user_by_email(test_user["email"])
-            result = queries.get_filtered_stats(user["id"], "2026-04-01", "2026-04-30")
+            result = queries.get_summary_stats(user["id"], "2026-04-01", "2026-04-30")
         assert result == {"total_spent": 0, "transaction_count": 0, "top_category": "—"}
 
 
-class TestGetFilteredTransactions:
+class TestGetRecentTransactions:
     def test_returns_transactions_in_range_newest_first(
         self, app, test_user, insert_expense
     ):
@@ -36,7 +36,7 @@ class TestGetFilteredTransactions:
             user = db_module.get_user_by_email(test_user["email"])
             insert_expense(user["id"], 10.00, "Food",  "2026-04-01", "Earlier")
             insert_expense(user["id"], 20.00, "Bills", "2026-04-15", "Later")
-            result = queries.get_filtered_transactions(user["id"], "2026-04-01", "2026-04-30")
+            result = queries.get_recent_transactions(user["id"], date_from="2026-04-01", date_to="2026-04-30")
         assert len(result) == 2
         assert result[0]["description"] == "Later"
         assert result[1]["description"] == "Earlier"
@@ -45,24 +45,24 @@ class TestGetFilteredTransactions:
         with app.app_context():
             user = db_module.get_user_by_email(test_user["email"])
             insert_expense(user["id"], 10.00, "Food", "2026-03-01", "Out of range")
-            result = queries.get_filtered_transactions(user["id"], "2026-04-01", "2026-04-30")
+            result = queries.get_recent_transactions(user["id"], date_from="2026-04-01", date_to="2026-04-30")
         assert result == []
 
     def test_date_formatted_as_month_day_year(self, app, test_user, insert_expense):
         with app.app_context():
             user = db_module.get_user_by_email(test_user["email"])
             insert_expense(user["id"], 10.00, "Food", "2026-04-05", "Lunch")
-            result = queries.get_filtered_transactions(user["id"], "2026-04-01", "2026-04-30")
+            result = queries.get_recent_transactions(user["id"], date_from="2026-04-01", date_to="2026-04-30")
         assert result[0]["date"] == "Apr 05, 2026"
 
 
-class TestGetFilteredBreakdown:
+class TestGetCategoryBreakdown:
     def test_returns_breakdown_for_range_only(self, app, test_user, insert_expense):
         with app.app_context():
             user = db_module.get_user_by_email(test_user["email"])
             insert_expense(user["id"], 80.00, "Bills", "2026-04-01", "In range")
             insert_expense(user["id"], 20.00, "Food",  "2026-03-01", "Out of range")
-            result = queries.get_filtered_breakdown(user["id"], "2026-04-01", "2026-04-30")
+            result = queries.get_category_breakdown(user["id"], "2026-04-01", "2026-04-30")
         assert len(result) == 1
         assert result[0]["name"] == "Bills"
 
@@ -72,13 +72,13 @@ class TestGetFilteredBreakdown:
             insert_expense(user["id"], 10.00, "Food",      "2026-04-01", "a")
             insert_expense(user["id"], 20.00, "Transport", "2026-04-02", "b")
             insert_expense(user["id"], 30.00, "Bills",     "2026-04-03", "c")
-            result = queries.get_filtered_breakdown(user["id"], "2026-04-01", "2026-04-30")
+            result = queries.get_category_breakdown(user["id"], "2026-04-01", "2026-04-30")
         assert sum(item["pct"] for item in result) == 100
 
     def test_returns_empty_list_for_empty_range(self, app, test_user):
         with app.app_context():
             user = db_module.get_user_by_email(test_user["email"])
-            result = queries.get_filtered_breakdown(user["id"], "2026-04-01", "2026-04-30")
+            result = queries.get_category_breakdown(user["id"], "2026-04-01", "2026-04-30")
         assert result == []
 
 
@@ -143,14 +143,19 @@ class TestProfileDateFilter:
         assert response.status_code == 200
         assert b"Start date must be before end date" in response.data
 
+    def test_one_sided_date_flashes_error(self, logged_in_client):
+        response = logged_in_client.get("/profile?date_from=2026-05-01")
+        assert response.status_code == 200
+        assert b"Please provide both a start date and an end date" in response.data
 
-class TestFilteredHelpersWithNoneParams:
+
+class TestHelpersWithNoneParams:
     def test_stats_with_none_returns_all(self, app, test_user, insert_expense):
         with app.app_context():
             user = db_module.get_user_by_email(test_user["email"])
             insert_expense(user["id"], 10.00, "Food",  "2020-01-01", "Old")
             insert_expense(user["id"], 20.00, "Bills", "2026-05-01", "New")
-            result = queries.get_filtered_stats(user["id"], None, None)
+            result = queries.get_summary_stats(user["id"], None, None)
         assert result["transaction_count"] == 2
         assert result["total_spent"] == pytest.approx(30.00)
 
@@ -159,7 +164,7 @@ class TestFilteredHelpersWithNoneParams:
             user = db_module.get_user_by_email(test_user["email"])
             insert_expense(user["id"], 10.00, "Food",  "2020-01-01", "Old")
             insert_expense(user["id"], 20.00, "Bills", "2026-05-01", "New")
-            result = queries.get_filtered_transactions(user["id"], None, None)
+            result = queries.get_recent_transactions(user["id"], date_from=None, date_to=None)
         assert len(result) == 2
 
     def test_breakdown_with_none_returns_all(self, app, test_user, insert_expense):
@@ -167,5 +172,5 @@ class TestFilteredHelpersWithNoneParams:
             user = db_module.get_user_by_email(test_user["email"])
             insert_expense(user["id"], 50.00, "Food",  "2020-01-01", "Old")
             insert_expense(user["id"], 50.00, "Bills", "2026-05-01", "New")
-            result = queries.get_filtered_breakdown(user["id"], None, None)
+            result = queries.get_category_breakdown(user["id"], None, None)
         assert len(result) == 2

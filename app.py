@@ -5,9 +5,9 @@ import calendar
 from database.db import get_db, init_db, seed_db, get_user_by_email
 from database.queries import (
     get_user_by_id,
-    get_filtered_stats,
-    get_filtered_transactions,
-    get_filtered_breakdown,
+    get_summary_stats,
+    get_recent_transactions,
+    get_category_breakdown,
 )
 from werkzeug.security import generate_password_hash, check_password_hash
 
@@ -98,58 +98,52 @@ def logout():
     return redirect(url_for("landing"))
 
 
+def _first_day_n_months_ago(today, n):
+    """First day of the month that is n months before today's month."""
+    m, y = today.month - n, today.year
+    if m <= 0:
+        m += 12
+        y -= 1
+    return datetime.date(y, m, 1)
+
+
 def _compute_preset_dates(today):
     first_of_month = today.replace(day=1)
     last_of_month = today.replace(day=calendar.monthrange(today.year, today.month)[1])
-
-    m3, y3 = today.month - 2, today.year
-    if m3 <= 0:
-        m3 += 12
-        y3 -= 1
-    three_months_start = datetime.date(y3, m3, 1)
-
-    m6, y6 = today.month - 5, today.year
-    if m6 <= 0:
-        m6 += 12
-        y6 -= 1
-    six_months_start = datetime.date(y6, m6, 1)
-
     return {
         "this_month":    (first_of_month.isoformat(), last_of_month.isoformat()),
-        "last_3_months": (three_months_start.isoformat(), last_of_month.isoformat()),
-        "last_6_months": (six_months_start.isoformat(), last_of_month.isoformat()),
+        "last_3_months": (_first_day_n_months_ago(today, 2).isoformat(), last_of_month.isoformat()),
+        "last_6_months": (_first_day_n_months_ago(today, 5).isoformat(), last_of_month.isoformat()),
     }
 
 
-@app.route("/profile")
-def profile():
-    if not session.get("user_id"):
-        return redirect(url_for("login"))
-
-    today = datetime.date.today()
-    presets = _compute_preset_dates(today)
-
-    raw_from = request.args.get("date_from", "")
-    raw_to = request.args.get("date_to", "")
+def _parse_date_range(args, presets):
+    """Validate date_from/date_to from query args; return (date_from, date_to, active_preset)."""
+    raw_from = args.get("date_from", "")
+    raw_to = args.get("date_to", "")
 
     date_from = None
     date_to = None
 
     if raw_from:
         try:
-            datetime.datetime.strptime(raw_from, "%Y-%m-%d")
+            datetime.date.fromisoformat(raw_from)
             date_from = raw_from
         except ValueError:
             pass
 
     if raw_to:
         try:
-            datetime.datetime.strptime(raw_to, "%Y-%m-%d")
+            datetime.date.fromisoformat(raw_to)
             date_to = raw_to
         except ValueError:
             pass
 
-    if date_from and date_to and date_from > date_to:
+    if bool(date_from) != bool(date_to):
+        flash("Please provide both a start date and an end date.")
+        date_from = None
+        date_to = None
+    elif date_from and date_to and date_from > date_to:
         flash("Start date must be before end date.")
         date_from = None
         date_to = None
@@ -165,18 +159,34 @@ def profile():
     else:
         active_preset = "custom"
 
+    return date_from, date_to, active_preset
+
+
+@app.route("/profile")
+def profile():
+    if not session.get("user_id"):
+        return redirect(url_for("login"))
+
+    today = datetime.date.today()
+    presets = _compute_preset_dates(today)
+    date_from, date_to, active_preset = _parse_date_range(request.args, presets)
+
     user_data = get_user_by_id(session["user_id"])
+    if user_data is None:
+        return redirect(url_for("logout"))
     user = {
-        **user_data,
-        "initials": "".join(p[0].upper() for p in user_data["name"].split()[:2]),
+        "name":         user_data["name"],
+        "email":        user_data["email"],
+        "member_since": user_data["member_since"],
+        "initials":     "".join(p[0].upper() for p in user_data["name"].split()[:2]),
     }
 
     return render_template(
         "profile.html",
         user=user,
-        stats=get_filtered_stats(session["user_id"], date_from, date_to),
-        expenses=get_filtered_transactions(session["user_id"], date_from, date_to),
-        category_breakdown=get_filtered_breakdown(session["user_id"], date_from, date_to),
+        stats=get_summary_stats(session["user_id"], date_from, date_to),
+        expenses=get_recent_transactions(session["user_id"], date_from=date_from, date_to=date_to),
+        category_breakdown=get_category_breakdown(session["user_id"], date_from, date_to),
         date_from=date_from,
         date_to=date_to,
         active_preset=active_preset,
