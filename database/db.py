@@ -83,9 +83,10 @@ def seed_db():
 def get_user_by_id(user_id):
     conn = get_db()
     try:
-        return conn.execute(
+        row = conn.execute(
             "SELECT * FROM users WHERE id = ?", (user_id,)
         ).fetchone()
+        return dict(row) if row is not None else None
     finally:
         conn.close()
 

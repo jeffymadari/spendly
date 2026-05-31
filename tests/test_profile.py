@@ -48,17 +48,21 @@ class TestGetExpensesForUser:
 
     def test_does_not_return_other_users_expenses(self, app, test_user, insert_expense):
         with app.app_context():
+            # Create a second user directly — no fixture for multi-user scenarios
             conn = db_module.get_db()
-            conn.execute(
-                "INSERT INTO users (name, email, password_hash) VALUES (?, ?, ?)",
-                ("Other", "other@example.com", "hash"),
-            )
-            conn.commit()
-            other = conn.execute(
-                "SELECT id FROM users WHERE email = ?", ("other@example.com",)
-            ).fetchone()
-            conn.close()
-            insert_expense(other["id"], 50.00, "Bills", "2026-04-10", "Not mine")
+            try:
+                conn.execute(
+                    "INSERT INTO users (name, email, password_hash) VALUES (?, ?, ?)",
+                    ("Other", "other@example.com", "hash"),
+                )
+                conn.commit()
+                other = conn.execute(
+                    "SELECT id FROM users WHERE email = ?", ("other@example.com",)
+                ).fetchone()
+                other_id = other["id"]
+            finally:
+                conn.close()
+            insert_expense(other_id, 50.00, "Bills", "2026-04-10", "Not mine")
             user = db_module.get_user_by_email(test_user["email"])
             rows = db_module.get_expenses_for_user(user["id"], "2026-04-01", "2026-04-30")
         assert len(rows) == 0
