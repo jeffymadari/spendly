@@ -101,3 +101,54 @@ def test_post_invalid_does_not_insert_row(logged_in_client):
     count = conn.execute("SELECT COUNT(*) FROM expenses").fetchone()[0]
     conn.close()
     assert count == 0
+
+
+def test_post_valid_expense_redirects_to_profile(logged_in_client):
+    response = logged_in_client.post("/expenses/add", data={
+        "amount": "15.00",
+        "category": "Food",
+        "date": "2026-06-01",
+        "description": "Lunch",
+    }, follow_redirects=False)
+    assert response.status_code == 302
+    assert "/profile" in response.headers["Location"]
+
+
+def test_post_valid_expense_inserts_row(logged_in_client):
+    logged_in_client.post("/expenses/add", data={
+        "amount": "15.00",
+        "category": "Food",
+        "date": "2026-06-01",
+        "description": "Lunch",
+    })
+    conn = db_module.get_db()
+    row = conn.execute("SELECT * FROM expenses").fetchone()
+    conn.close()
+    assert row is not None
+    assert float(row["amount"]) == 15.00
+    assert row["category"] == "Food"
+    assert row["date"] == "2026-06-01"
+    assert row["description"] == "Lunch"
+
+
+def test_post_blank_description_stores_none(logged_in_client):
+    logged_in_client.post("/expenses/add", data={
+        "amount": "8.00",
+        "category": "Transport",
+        "date": "2026-06-01",
+        "description": "   ",    # whitespace only → should store None
+    })
+    conn = db_module.get_db()
+    row = conn.execute("SELECT description FROM expenses").fetchone()
+    conn.close()
+    assert row["description"] is None
+
+
+def test_post_valid_expense_shows_flash_on_profile(logged_in_client):
+    response = logged_in_client.post("/expenses/add", data={
+        "amount": "15.00",
+        "category": "Food",
+        "date": "2026-06-01",
+        "description": "",
+    }, follow_redirects=True)
+    assert b"Expense added" in response.data
