@@ -30,3 +30,26 @@ def test_user(app):
     conn.commit()
     conn.close()
     return {"email": "test@example.com", "password": "password123", "name": "Test User"}
+
+
+@pytest.fixture
+def logged_in_client(client, test_user):
+    client.post("/login", data={
+        "email": test_user["email"],
+        "password": test_user["password"],
+    })
+    return client
+
+
+@pytest.fixture
+def insert_expense(app):
+    def _insert(user_id, amount, category, date, description=""):
+        conn = db_module.get_db()
+        conn.execute(
+            "INSERT INTO expenses (user_id, amount, category, date, description)"
+            " VALUES (?, ?, ?, ?, ?)",
+            (user_id, amount, category, date, description),
+        )
+        conn.commit()
+        conn.close()
+    return _insert

@@ -24,11 +24,56 @@
       </div>
     </div>
 
-    <!-- ② Summary Stats Row -->
+    <!-- ② Date filter -->
+    <div class="filter-card profile-card">
+      {% with messages = get_flashed_messages() %}
+        {% if messages %}
+          {% for msg in messages %}
+            <p class="flash-error">{{ msg }}</p>
+          {% endfor %}
+        {% endif %}
+      {% endwith %}
+      <div class="filter-bar">
+        <span class="filter-label">Period</span>
+        <a href="{{ url_for('profile') }}"
+           class="filter-btn{% if active_preset == 'all_time' %} filter-btn--active{% endif %}">
+          All Time
+        </a>
+        <a href="{{ url_for('profile', date_from=presets['this_month'][0], date_to=presets['this_month'][1]) }}"
+           class="filter-btn{% if active_preset == 'this_month' %} filter-btn--active{% endif %}">
+          This Month
+        </a>
+        <a href="{{ url_for('profile', date_from=presets['last_3_months'][0], date_to=presets['last_3_months'][1]) }}"
+           class="filter-btn{% if active_preset == 'last_3_months' %} filter-btn--active{% endif %}">
+          Last 3 Months
+        </a>
+        <a href="{{ url_for('profile', date_from=presets['last_6_months'][0], date_to=presets['last_6_months'][1]) }}"
+           class="filter-btn{% if active_preset == 'last_6_months' %} filter-btn--active{% endif %}">
+          Last 6 Months
+        </a>
+        <button id="toggle-custom" type="button"
+                class="filter-btn{% if active_preset == 'custom' %} filter-btn--active{% endif %}">
+          Custom
+        </button>
+      </div>
+      <div id="custom-range"
+           class="filter-custom{% if active_preset != 'custom' %} filter-custom--hidden{% endif %}">
+        <form method="GET" action="{{ url_for('profile') }}" class="custom-range-form">
+          <input type="date" name="date_from"
+                 value="{{ date_from if active_preset == 'custom' else '' }}">
+          <span class="custom-range-sep">to</span>
+          <input type="date" name="date_to"
+                 value="{{ date_to if active_preset == 'custom' else '' }}">
+          <button type="submit" class="btn-apply">Apply</button>
+        </form>
+      </div>
+    </div>
+
+    <!-- ③ Summary Stats Row -->
     <div class="stats-grid">
       <div class="stat-card">
         <div class="stat-icon"><i data-lucide="wallet"></i></div>
-        <div class="stat-value">${{ "%.2f"|format(stats.total_spent) }}</div>
+        <div class="stat-value">₹{{ "%.2f"|format(stats.total_spent) }}</div>
         <div class="stat-label">Total Spent</div>
       </div>
       <div class="stat-card">
@@ -44,10 +89,16 @@
     </div>
 
     <!-- ③ Transaction History Table -->
-    <h2 class="section-heading">
-      <i data-lucide="clock"></i>
-      Transaction History
-    </h2>
+    <div class="section-heading-row">
+      <h2 class="section-heading">
+        <i data-lucide="clock"></i>
+        Transaction History
+      </h2>
+      <a href="{{ url_for('add_expense') }}" class="btn-add-expense">
+        <i data-lucide="plus"></i>
+        Add Expense
+      </a>
+    </div>
     <div class="profile-card tx-table-wrap">
       <table class="tx-table">
         <thead>
@@ -59,18 +110,24 @@
           </tr>
         </thead>
         <tbody>
-          {% for expense in expenses %}
-          <tr>
-            <td class="tx-date">{{ expense.date }}</td>
-            <td>{{ expense.description }}</td>
-            <td>
-              <span class="category-badge cat-{{ expense.category | lower }}">
-                {{ expense.category }}
-              </span>
-            </td>
-            <td class="amount">${{ "%.2f"|format(expense.amount) }}</td>
-          </tr>
-          {% endfor %}
+          {% if expenses %}
+            {% for expense in expenses %}
+            <tr>
+              <td class="tx-date">{{ expense.date }}</td>
+              <td>{{ expense.description }}</td>
+              <td>
+                <span class="category-badge cat-{{ expense.category | lower }}">
+                  {{ expense.category }}
+                </span>
+              </td>
+              <td class="amount">₹{{ "%.2f"|format(expense.amount) }}</td>
+            </tr>
+            {% endfor %}
+          {% else %}
+            <tr>
+              <td colspan="4" class="tx-empty">No transactions found.</td>
+            </tr>
+          {% endif %}
         </tbody>
       </table>
     </div>
@@ -81,17 +138,21 @@
       Category Breakdown
     </h2>
     <div class="profile-card">
-      {% for item in category_breakdown %}
-      <div class="breakdown-row">
-        <div class="breakdown-label">
-          <span>{{ item.name }}</span>
-          <span class="breakdown-amount">${{ "%.2f"|format(item.amount) }}</span>
+      {% if category_breakdown %}
+        {% for item in category_breakdown %}
+        <div class="breakdown-row">
+          <div class="breakdown-label">
+            <span>{{ item.name }}</span>
+            <span class="breakdown-amount">₹{{ "%.2f"|format(item.amount) }}</span>
+          </div>
+          <div class="breakdown-track">
+            <div class="breakdown-fill" style="width: {{ item.pct }}%"></div>
+          </div>
         </div>
-        <div class="breakdown-track">
-          <div class="breakdown-fill" style="width: {{ item.pct }}%"></div>
-        </div>
-      </div>
-      {% endfor %}
+        {% endfor %}
+      {% else %}
+        <p class="breakdown-empty">No spending data yet.</p>
+      {% endif %}
     </div>
 
   </div>
@@ -101,5 +162,8 @@
 {% block scripts %}
 <script>
   lucide.createIcons();
+  document.getElementById('toggle-custom').addEventListener('click', function () {
+    document.getElementById('custom-range').classList.toggle('filter-custom--hidden');
+  });
 </script>
 {% endblock %}

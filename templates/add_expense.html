@@ -1,0 +1,180 @@
+{% extends "base.html" %}
+
+{% block title %}Add Expense — Spendly{% endblock %}
+
+{% block head %}
+<style>
+  .expense-form-page {
+    min-height: 80vh;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    padding: 3rem 1rem;
+    background: var(--surface);
+  }
+  .expense-form-card {
+    background: var(--surface-raised);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 2.5rem 2rem;
+    width: 100%;
+    max-width: 480px;
+    box-shadow: 0 2px 12px var(--shadow-sm);
+  }
+  .expense-form-card h1 {
+    font-family: var(--font-display);
+    font-size: 1.5rem;
+    color: var(--ink);
+    margin-bottom: 0.25rem;
+  }
+  .expense-form-subtitle {
+    color: var(--ink-muted);
+    font-size: 0.9rem;
+    margin-bottom: 2rem;
+  }
+  .form-group {
+    margin-bottom: 1.25rem;
+  }
+  .form-group label {
+    display: block;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--ink);
+    margin-bottom: 0.4rem;
+    letter-spacing: 0.02em;
+  }
+  .form-group input,
+  .form-group select {
+    width: 100%;
+    padding: 0.65rem 0.85rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    font-family: var(--font-body);
+    font-size: 0.95rem;
+    color: var(--ink);
+    background: var(--surface);
+    box-sizing: border-box;
+    transition: border-color 0.15s;
+  }
+  .form-group input:focus,
+  .form-group select:focus {
+    outline: none;
+    border-color: var(--accent);
+  }
+  .form-label-hint {
+    font-weight: 400;
+    color: var(--ink-muted);
+  }
+  .form-error {
+    background: var(--danger-light);
+    color: var(--danger);
+    border: 1px solid var(--danger-border);
+    border-radius: var(--radius-sm);
+    padding: 0.65rem 1rem;
+    font-size: 0.9rem;
+    margin-bottom: 1.25rem;
+  }
+  .form-actions {
+    display: flex;
+    gap: 0.75rem;
+    margin-top: 1.75rem;
+  }
+  .btn-submit {
+    flex: 1;
+    padding: 0.7rem 1.25rem;
+    background: var(--accent);
+    color: var(--accent-fg, #fff);
+    border: none;
+    border-radius: var(--radius-md);
+    font-size: 0.95rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: opacity 0.15s;
+  }
+  .btn-submit:hover { opacity: 0.88; }
+  .btn-cancel {
+    padding: 0.7rem 1.25rem;
+    background: transparent;
+    color: var(--ink-muted);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    font-size: 0.95rem;
+    cursor: pointer;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: border-color 0.15s, color 0.15s;
+  }
+  .btn-cancel:hover { border-color: var(--ink-soft); color: var(--ink); }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="expense-form-page">
+  <div class="expense-form-card">
+    <h1>Add Expense</h1>
+    <p class="expense-form-subtitle">Record a new spending entry</p>
+
+    {% if error %}
+    <div class="form-error">{{ error }}</div>
+    {% endif %}
+
+    <form method="POST" action="{{ url_for('add_expense') }}">
+      <div class="form-group">
+        <label for="amount">Amount (₹)</label>
+        <input
+          type="number"
+          id="amount"
+          name="amount"
+          step="0.01"
+          min="0.01"
+          placeholder="0.00"
+          value="{{ amount or '' }}"
+          required
+        >
+      </div>
+
+      <div class="form-group">
+        <label for="category">Category</label>
+        <select id="category" name="category" required>
+          <option value="" disabled {% if not category %}selected{% endif %}>Select a category</option>
+          {% for cat in categories %}
+          <option value="{{ cat }}" {% if cat == category %}selected{% endif %}>{{ cat }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label for="date">Date</label>
+        <input
+          type="date"
+          id="date"
+          name="date"
+          value="{{ date or today }}"
+          required
+        >
+      </div>
+
+      <div class="form-group">
+        <label for="description">
+          Description
+          <span class="form-label-hint">(optional)</span>
+        </label>
+        <input
+          type="text"
+          id="description"
+          name="description"
+          placeholder="e.g. Coffee at Costa"
+          value="{{ description or '' }}"
+        >
+      </div>
+
+      <div class="form-actions">
+        <a href="{{ url_for('profile') }}" class="btn-cancel">Cancel</a>
+        <button type="submit" class="btn-submit">Add Expense</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

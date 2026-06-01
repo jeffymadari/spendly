@@ -1,6 +1,14 @@
-from flask import Flask, render_template, request, session, redirect, url_for
+from flask import Flask, render_template, request, session, redirect, url_for, flash
 import sqlite3
+import datetime
+import calendar
 from database.db import get_db, init_db, seed_db, get_user_by_email
+from database.queries import (
+    get_user_by_id,
+    get_summary_stats,
+    get_recent_transactions,
+    get_category_breakdown,
+)
 from werkzeug.security import generate_password_hash, check_password_hash
 
 app = Flask(__name__)
@@ -90,57 +98,168 @@ def logout():
     return redirect(url_for("landing"))
 
 
+def _first_day_n_months_ago(today, n):
+    """First day of the month that is n months before today's month."""
+    m, y = today.month - n, today.year
+    if m <= 0:
+        m += 12
+        y -= 1
+    return datetime.date(y, m, 1)
+
+
+def _compute_preset_dates(today):
+    first_of_month = today.replace(day=1)
+    last_of_month = today.replace(day=calendar.monthrange(today.year, today.month)[1])
+    return {
+        "this_month":    (first_of_month.isoformat(), last_of_month.isoformat()),
+        "last_3_months": (_first_day_n_months_ago(today, 2).isoformat(), last_of_month.isoformat()),
+        "last_6_months": (_first_day_n_months_ago(today, 5).isoformat(), last_of_month.isoformat()),
+    }
+
+
+def _parse_date_range(args, presets):
+    """Validate date_from/date_to from query args; return (date_from, date_to, active_preset)."""
+    raw_from = args.get("date_from", "")
+    raw_to = args.get("date_to", "")
+
+    date_from = None
+    date_to = None
+
+    if raw_from:
+        try:
+            datetime.date.fromisoformat(raw_from)
+            date_from = raw_from
+        except ValueError:
+            pass
+
+    if raw_to:
+        try:
+            datetime.date.fromisoformat(raw_to)
+            date_to = raw_to
+        except ValueError:
+            pass
+
+    if bool(date_from) != bool(date_to):
+        flash("Please provide both a start date and an end date.")
+        date_from = None
+        date_to = None
+    elif date_from and date_to and date_from > date_to:
+        flash("Start date must be before end date.")
+        date_from = None
+        date_to = None
+
+    if date_from is None and date_to is None:
+        active_preset = "all_time"
+    elif (date_from, date_to) == presets["this_month"]:
+        active_preset = "this_month"
+    elif (date_from, date_to) == presets["last_3_months"]:
+        active_preset = "last_3_months"
+    elif (date_from, date_to) == presets["last_6_months"]:
+        active_preset = "last_6_months"
+    else:
+        active_preset = "custom"
+
+    return date_from, date_to, active_preset
+
+
 @app.route("/profile")
 def profile():
     if not session.get("user_id"):
         return redirect(url_for("login"))
 
+    today = datetime.date.today()
+    presets = _compute_preset_dates(today)
+    date_from, date_to, active_preset = _parse_date_range(request.args, presets)
+
+    user_data = get_user_by_id(session["user_id"])
+    if user_data is None:
+        return redirect(url_for("logout"))
     user = {
-        "name": "Alex Rivera",
-        "email": "alex@example.com",
-        "member_since": "January 2025",
-        "initials": "AR",
+        "name":         user_data["name"],
+        "email":        user_data["email"],
+        "member_since": user_data["member_since"],
+        "initials":     "".join(p[0].upper() for p in user_data["name"].split()[:2]),
     }
-
-    stats = {
-        "total_spent": 268.63,
-        "transaction_count": 8,
-        "top_category": "Bills",
-    }
-
-    expenses = [
-        {"date": "Apr 13, 2026", "description": "Miscellaneous",         "category": "Other",         "amount": 20.00},
-        {"date": "Apr 11, 2026", "description": "Groceries",             "category": "Food",          "amount": 8.75},
-        {"date": "Apr 09, 2026", "description": "Clothing",              "category": "Shopping",      "amount": 62.40},
-        {"date": "Apr 07, 2026", "description": "Streaming subscription","category": "Entertainment", "amount": 14.99},
-        {"date": "Apr 05, 2026", "description": "Pharmacy",              "category": "Health",        "amount": 25.00},
-        {"date": "Apr 03, 2026", "description": "Internet bill",         "category": "Bills",         "amount": 89.99},
-        {"date": "Apr 02, 2026", "description": "Monthly bus pass",      "category": "Transport",     "amount": 35.00},
-        {"date": "Apr 01, 2026", "description": "Lunch at cafe",         "category": "Food",          "amount": 12.50},
-    ]
-
-    category_breakdown = [
-        {"name": "Bills",         "amount": 89.99, "pct": 33},
-        {"name": "Shopping",      "amount": 62.40, "pct": 23},
-        {"name": "Transport",     "amount": 35.00, "pct": 13},
-        {"name": "Health",        "amount": 25.00, "pct":  9},
-        {"name": "Food",          "amount": 21.25, "pct":  8},
-        {"name": "Entertainment", "amount": 14.99, "pct":  6},
-        {"name": "Other",         "amount": 20.00, "pct":  7},
-    ]
 
     return render_template(
         "profile.html",
         user=user,
-        stats=stats,
-        expenses=expenses,
-        category_breakdown=category_breakdown,
+        stats=get_summary_stats(session["user_id"], date_from, date_to),
+        expenses=get_recent_transactions(session["user_id"], date_from=date_from, date_to=date_to),
+        category_breakdown=get_category_breakdown(session["user_id"], date_from, date_to),
+        date_from=date_from,
+        date_to=date_to,
+        active_preset=active_preset,
+        presets=presets,
     )
 
 
-@app.route("/expenses/add")
+EXPENSE_CATEGORIES = [
+    "Food", "Transport", "Bills", "Health",
+    "Entertainment", "Shopping", "Other",
+]
+
+
+@app.route("/expenses/add", methods=["GET", "POST"])
 def add_expense():
-    return "Add expense — coming in Step 7"
+    if not session.get("user_id"):
+        return redirect(url_for("login"))
+
+    today = datetime.date.today().isoformat()
+
+    if request.method == "GET":
+        return render_template(
+            "add_expense.html",
+            categories=EXPENSE_CATEGORIES,
+            today=today,
+        )
+
+    # POST
+    raw_amount  = request.form.get("amount", "").strip()
+    category    = request.form.get("category", "").strip()
+    date_str    = request.form.get("date", "").strip()
+    description = request.form.get("description", "").strip() or None
+
+    def rerender(error):
+        return render_template(
+            "add_expense.html",
+            categories=EXPENSE_CATEGORIES,
+            today=today,
+            error=error,
+            amount=raw_amount,
+            category=category,
+            date=date_str,
+            description=description,
+        )
+
+    try:
+        amount = float(raw_amount)
+        if amount <= 0:
+            raise ValueError
+    except (ValueError, TypeError):
+        return rerender("Please enter a valid amount greater than zero.")
+
+    if category not in EXPENSE_CATEGORIES:
+        return rerender("Please select a valid category.")
+
+    try:
+        datetime.date.fromisoformat(date_str)
+    except ValueError:
+        return rerender("Please enter a valid date.")
+
+    conn = get_db()
+    try:
+        conn.execute(
+            "INSERT INTO expenses (user_id, amount, category, date, description)"
+            " VALUES (?, ?, ?, ?, ?)",
+            (session["user_id"], amount, category, date_str, description),
+        )
+        conn.commit()
+    finally:
+        conn.close()
+
+    flash("Expense added.")
+    return redirect(url_for("profile"))
 
 
 @app.route("/expenses/<int:id>/edit")
@@ -151,6 +270,13 @@ def edit_expense(id):
 @app.route("/expenses/<int:id>/delete")
 def delete_expense(id):
     return "Delete expense — coming in Step 9"
+
+
+@app.route("/analytics")
+def analytics():
+    if not session.get("user_id"):
+        return redirect(url_for("login"))
+    return render_template("analytics.html")
 
 
 @app.route("/dashboard")
