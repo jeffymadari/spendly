@@ -214,6 +214,53 @@ def add_expense():
             today=today,
         )
 
+    # POST
+    raw_amount  = request.form.get("amount", "").strip()
+    category    = request.form.get("category", "").strip()
+    date_str    = request.form.get("date", "").strip()
+    description = request.form.get("description", "").strip() or None
+
+    def rerender(error):
+        return render_template(
+            "add_expense.html",
+            categories=EXPENSE_CATEGORIES,
+            today=today,
+            error=error,
+            amount=raw_amount,
+            category=category,
+            date=date_str,
+            description=description,
+        )
+
+    try:
+        amount = float(raw_amount)
+        if amount <= 0:
+            raise ValueError
+    except (ValueError, TypeError):
+        return rerender("Please enter a valid amount greater than zero.")
+
+    if category not in EXPENSE_CATEGORIES:
+        return rerender("Please select a valid category.")
+
+    try:
+        datetime.date.fromisoformat(date_str)
+    except ValueError:
+        return rerender("Please enter a valid date.")
+
+    conn = get_db()
+    try:
+        conn.execute(
+            "INSERT INTO expenses (user_id, amount, category, date, description)"
+            " VALUES (?, ?, ?, ?, ?)",
+            (session["user_id"], amount, category, date_str, description),
+        )
+        conn.commit()
+    finally:
+        conn.close()
+
+    flash("Expense added.")
+    return redirect(url_for("profile"))
+
 
 @app.route("/expenses/<int:id>/edit")
 def edit_expense(id):
