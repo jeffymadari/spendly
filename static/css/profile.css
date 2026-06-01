@@ -429,6 +429,47 @@
   font-size: 0.875rem;
 }
 
+<<<<<<< HEAD
+=======
+/* ------------------------------------------------------------------ */
+/* Add Expense button row                                               */
+/* ------------------------------------------------------------------ */
+
+.section-heading-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.5rem;
+}
+
+.section-heading-row .section-heading {
+  margin-bottom: 0;
+}
+
+.btn-add-expense {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.5rem 1rem;
+  background: var(--accent);
+  color: var(--accent-fg, #fff);
+  border-radius: var(--radius-md);
+  font-size: 0.875rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition: opacity 0.15s;
+}
+
+.btn-add-expense:hover {
+  opacity: 0.88;
+}
+
+.btn-add-expense i {
+  width: 14px;
+  height: 14px;
+}
+
+>>>>>>> 3ef1b2a0f20740f48ea87de4278099f1f2ec1879
 @media (max-width: 600px) {
   .profile-info-card {
     flex-direction: column;
