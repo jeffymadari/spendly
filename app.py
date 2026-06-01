@@ -209,6 +209,13 @@ def delete_expense(id):
     return "Delete expense — coming in Step 9"
 
 
+@app.route("/analytics")
+def analytics():
+    if not session.get("user_id"):
+        return redirect(url_for("login"))
+    return render_template("analytics.html")
+
+
 @app.route("/dashboard")
 def dashboard():
     return "Dashboard — coming in Step 3"

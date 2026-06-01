@@ -2,7 +2,11 @@
   "permissions": {
     "allow": [
       "WebSearch",
-      "Bash(git init)"
+      "Bash(git init)",
+      "mcp__database-server__describe_table",
+      "mcp__database-server__read_query",
+      "mcp__plugin_figma_figma__get_design_context",
+      "mcp__plugin_figma_figma__get_screenshot"
     ]
   }
 }
