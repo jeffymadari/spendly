@@ -194,9 +194,25 @@ def profile():
     )
 
 
-@app.route("/expenses/add")
+EXPENSE_CATEGORIES = [
+    "Food", "Transport", "Bills", "Health",
+    "Entertainment", "Shopping", "Other",
+]
+
+
+@app.route("/expenses/add", methods=["GET", "POST"])
 def add_expense():
-    return "Add expense — coming in Step 7"
+    if not session.get("user_id"):
+        return redirect(url_for("login"))
+
+    today = datetime.date.today().isoformat()
+
+    if request.method == "GET":
+        return render_template(
+            "add_expense.html",
+            categories=EXPENSE_CATEGORIES,
+            today=today,
+        )
 
 
 @app.route("/expenses/<int:id>/edit")
