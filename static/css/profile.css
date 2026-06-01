@@ -502,3 +502,26 @@
     -webkit-overflow-scrolling: touch;
   }
 }
+
+/* ------------------------------------------------------------------ */
+/* Transaction table — action buttons                                   */
+/* ------------------------------------------------------------------ */
+
+.btn-edit {
+  font-size: 0.8rem;
+  color: var(--accent);
+  text-decoration: none;
+  padding: 0.25rem 0.5rem;
+  border: 1px solid var(--accent);
+  border-radius: var(--radius-sm);
+  transition: background 0.15s, color 0.15s;
+}
+.btn-edit:hover {
+  background: var(--accent);
+  color: var(--accent-fg, #fff);
+}
+.tx-table th.actions,
+.tx-table td.actions {
+  text-align: center;
+  width: 80px;
+}
