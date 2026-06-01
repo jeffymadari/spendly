@@ -31,3 +31,73 @@ def test_get_includes_all_categories(logged_in_client):
     body = response.data.decode()
     for cat in ["Food", "Transport", "Bills", "Health", "Entertainment", "Shopping", "Other"]:
         assert cat in body
+
+
+def test_post_missing_amount_rerenders_form(logged_in_client):
+    response = logged_in_client.post("/expenses/add", data={
+        "amount": "",
+        "category": "Food",
+        "date": "2026-06-01",
+        "description": "",
+    })
+    assert response.status_code == 200
+    body = response.data.decode().lower()
+    assert "error" in body or "valid" in body or "amount" in body
+
+
+def test_post_zero_amount_rerenders_form(logged_in_client):
+    response = logged_in_client.post("/expenses/add", data={
+        "amount": "0",
+        "category": "Food",
+        "date": "2026-06-01",
+        "description": "",
+    })
+    assert response.status_code == 200
+    body = response.data.decode().lower()
+    assert "error" in body or "greater" in body or "positive" in body
+
+
+def test_post_invalid_category_rerenders_form(logged_in_client):
+    response = logged_in_client.post("/expenses/add", data={
+        "amount": "10.00",
+        "category": "Hacking",
+        "date": "2026-06-01",
+        "description": "",
+    })
+    assert response.status_code == 200
+    assert b"error" in response.data.lower()
+
+
+def test_post_invalid_date_rerenders_form(logged_in_client):
+    response = logged_in_client.post("/expenses/add", data={
+        "amount": "10.00",
+        "category": "Food",
+        "date": "not-a-date",
+        "description": "",
+    })
+    assert response.status_code == 200
+    assert b"error" in response.data.lower()
+
+
+def test_post_validation_failure_preserves_amount(logged_in_client):
+    response = logged_in_client.post("/expenses/add", data={
+        "amount": "42.50",
+        "category": "Hacking",   # invalid — triggers error
+        "date": "2026-06-01",
+        "description": "test",
+    })
+    assert response.status_code == 200
+    assert b"42.50" in response.data
+
+
+def test_post_invalid_does_not_insert_row(logged_in_client):
+    logged_in_client.post("/expenses/add", data={
+        "amount": "0",           # zero — invalid
+        "category": "Food",
+        "date": "2026-06-01",
+        "description": "",
+    })
+    conn = db_module.get_db()
+    count = conn.execute("SELECT COUNT(*) FROM expenses").fetchone()[0]
+    conn.close()
+    assert count == 0
