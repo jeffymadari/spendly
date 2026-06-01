@@ -57,7 +57,7 @@ def get_recent_transactions(user_id, limit=10, date_from=None, date_to=None):
     conn = get_db()
     try:
         rows = conn.execute(
-            f"SELECT date, description, category, amount FROM expenses"
+            f"SELECT id, date, description, category, amount FROM expenses"
             f" WHERE user_id = ? {clause} ORDER BY date DESC LIMIT ?",
             (user_id, *params, limit),
         ).fetchall()
@@ -66,12 +66,39 @@ def get_recent_transactions(user_id, limit=10, date_from=None, date_to=None):
     result = []
     for r in rows:
         result.append({
+            "id": r["id"],
             "date": datetime.date.fromisoformat(r["date"]).strftime("%b %d, %Y"),
             "description": r["description"],
             "category": r["category"],
             "amount": r["amount"],
         })
     return result
+
+
+def get_expense_by_id(expense_id, user_id):
+    conn = get_db()
+    try:
+        row = conn.execute(
+            "SELECT id, user_id, amount, category, date, description"
+            " FROM expenses WHERE id = ? AND user_id = ?",
+            (expense_id, user_id),
+        ).fetchone()
+        return dict(row) if row is not None else None
+    finally:
+        conn.close()
+
+
+def update_expense(expense_id, user_id, amount, category, date, description):
+    conn = get_db()
+    try:
+        conn.execute(
+            "UPDATE expenses SET amount=?, category=?, date=?, description=?"
+            " WHERE id=? AND user_id=?",
+            (amount, category, date, description, expense_id, user_id),
+        )
+        conn.commit()
+    finally:
+        conn.close()
 
 
 def get_category_breakdown(user_id, date_from=None, date_to=None):

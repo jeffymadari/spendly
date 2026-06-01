@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, session, redirect, url_for, flash
+from flask import Flask, render_template, request, session, redirect, url_for, flash, abort
 import sqlite3
 import datetime
 import calendar
@@ -8,6 +8,8 @@ from database.queries import (
     get_summary_stats,
     get_recent_transactions,
     get_category_breakdown,
+    get_expense_by_id,
+    update_expense,
 )
 from werkzeug.security import generate_password_hash, check_password_hash
 
@@ -200,6 +202,26 @@ EXPENSE_CATEGORIES = [
 ]
 
 
+def _validate_expense_form(raw_amount, category, date_str):
+    """Returns (amount_float, error_str). error_str is None when all fields are valid."""
+    try:
+        amount = float(raw_amount)
+        if amount <= 0:
+            raise ValueError
+    except (ValueError, TypeError):
+        return None, "Please enter a valid amount greater than zero."
+
+    if category not in EXPENSE_CATEGORIES:
+        return None, "Please select a valid category."
+
+    try:
+        datetime.date.fromisoformat(date_str)
+    except ValueError:
+        return None, "Please enter a valid date."
+
+    return amount, None
+
+
 @app.route("/expenses/add", methods=["GET", "POST"])
 def add_expense():
     if not session.get("user_id"):
@@ -232,20 +254,9 @@ def add_expense():
             description=description,
         )
 
-    try:
-        amount = float(raw_amount)
-        if amount <= 0:
-            raise ValueError
-    except (ValueError, TypeError):
-        return rerender("Please enter a valid amount greater than zero.")
-
-    if category not in EXPENSE_CATEGORIES:
-        return rerender("Please select a valid category.")
-
-    try:
-        datetime.date.fromisoformat(date_str)
-    except ValueError:
-        return rerender("Please enter a valid date.")
+    amount, error = _validate_expense_form(raw_amount, category, date_str)
+    if error:
+        return rerender(error)
 
     conn = get_db()
     try:
@@ -262,9 +273,54 @@ def add_expense():
     return redirect(url_for("profile"))
 
 
-@app.route("/expenses/<int:id>/edit")
-def edit_expense(id):
-    return "Edit expense — coming in Step 8"
+@app.route("/expenses/<int:expense_id>/edit", methods=["GET", "POST"])
+def edit_expense(expense_id):
+    if not session.get("user_id"):
+        return redirect(url_for("login"))
+
+    expense = get_expense_by_id(expense_id, session["user_id"])
+    if expense is None:
+        abort(404)
+
+    if request.method == "GET":
+        return render_template(
+            "edit_expense.html",
+            categories=EXPENSE_CATEGORIES,
+            expense_id=expense["id"],
+            amount=expense["amount"],
+            category=expense["category"],
+            date=expense["date"],
+            description=expense["description"] or "",
+        )
+
+    # POST
+    raw_amount  = request.form.get("amount", "").strip()
+    category    = request.form.get("category", "").strip()
+    date_str    = request.form.get("date", "").strip()
+    description = request.form.get("description", "").strip() or None
+
+    if description and len(description) > 255:
+        description = description[:255]
+
+    def rerender(error):
+        return render_template(
+            "edit_expense.html",
+            categories=EXPENSE_CATEGORIES,
+            expense_id=expense["id"],
+            error=error,
+            amount=raw_amount,
+            category=category,
+            date=date_str,
+            description=description,
+        )
+
+    amount, error = _validate_expense_form(raw_amount, category, date_str)
+    if error:
+        return rerender(error)
+
+    update_expense(expense_id, session["user_id"], amount, category, date_str, description)
+    flash("Expense updated.")
+    return redirect(url_for("profile"))
 
 
 @app.route("/expenses/<int:id>/delete")
