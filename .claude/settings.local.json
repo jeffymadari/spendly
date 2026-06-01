@@ -6,7 +6,9 @@
       "mcp__database-server__describe_table",
       "mcp__database-server__read_query",
       "mcp__plugin_figma_figma__get_design_context",
-      "mcp__plugin_figma_figma__get_screenshot"
+      "mcp__plugin_figma_figma__get_screenshot",
+      "mcp__github__search_repositories",
+      "mcp__github__get_me"
     ]
   }
 }
