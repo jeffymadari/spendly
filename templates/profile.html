@@ -89,10 +89,16 @@
     </div>
 
     <!-- ③ Transaction History Table -->
-    <h2 class="section-heading">
-      <i data-lucide="clock"></i>
-      Transaction History
-    </h2>
+    <div class="section-heading-row">
+      <h2 class="section-heading">
+        <i data-lucide="clock"></i>
+        Transaction History
+      </h2>
+      <a href="{{ url_for('add_expense') }}" class="btn-add-expense">
+        <i data-lucide="plus"></i>
+        Add Expense
+      </a>
+    </div>
     <div class="profile-card tx-table-wrap">
       <table class="tx-table">
         <thead>
