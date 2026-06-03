@@ -25,6 +25,7 @@
   },
   "enabledPlugins": {
     "agents-observe@agents-observe": true,
-    "context7@claude-plugins-official": true
+    "context7@claude-plugins-official": true,
+    "railway@railway-skills": true
   }
 }

@@ -8,7 +8,15 @@
       "mcp__plugin_figma_figma__get_design_context",
       "mcp__plugin_figma_figma__get_screenshot",
       "mcp__github__search_repositories",
-      "mcp__github__get_me"
+      "mcp__github__get_me",
+      "Skill(railway:use-railway)",
+      "Bash(RAILWAY_CALLER=\"skill:use-railway@1.2.2\" RAILWAY_AGENT_SESSION=\"railway-skill-$\\(date +%s\\)-$$\" railway whoami --json)",
+      "Bash(RAILWAY_CALLER=\"skill:use-railway@1.2.2\" RAILWAY_AGENT_SESSION=\"railway-skill-$\\(date +%s\\)-$$\" railway status --json)",
+      "Bash(RAILWAY_CALLER=\"skill:use-railway@1.2.2\" RAILWAY_AGENT_SESSION=\"railway-skill-1780468613-222\" railway up *)",
+      "Bash(RAILWAY_CALLER=\"skill:use-railway@1.2.2\" RAILWAY_AGENT_SESSION=\"railway-skill-1780468613-222\" railway domain *)",
+      "Bash(RAILWAY_CALLER=\"skill:use-railway@1.2.2\" RAILWAY_AGENT_SESSION=\"railway-skill-1780468613-222\" railway logs *)",
+      "Bash(RAILWAY_CALLER=\"skill:use-railway@1.2.2\" RAILWAY_AGENT_SESSION=\"railway-skill-1780468613-222\" railway status *)",
+      "Bash(Start-Sleep -Seconds 10)"
     ]
   }
 }
