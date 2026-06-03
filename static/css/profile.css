@@ -520,8 +520,22 @@
   background: var(--accent);
   color: var(--accent-fg, #fff);
 }
+.btn-delete {
+  font-size: 0.8rem;
+  color: var(--danger);
+  background: none;
+  cursor: pointer;
+  padding: 0.25rem 0.5rem;
+  border: 1px solid var(--danger);
+  border-radius: var(--radius-sm);
+  transition: background 0.15s, color 0.15s;
+}
+.btn-delete:hover {
+  background: var(--danger);
+  color: #fff;
+}
 .tx-table th.actions,
 .tx-table td.actions {
   text-align: center;
-  width: 80px;
+  width: 140px;
 }
