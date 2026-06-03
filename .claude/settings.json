@@ -1,7 +1,4 @@
 {
-  "enabledPlugins": {
-    "agents-observe@agents-observe": true
-  },
   "hooks": {
     "PostToolUse": [
       {
@@ -25,5 +22,9 @@
         ]
       }
     ]
+  },
+  "enabledPlugins": {
+    "agents-observe@agents-observe": true,
+    "context7@claude-plugins-official": true
   }
 }
