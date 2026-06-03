@@ -49,4 +49,4 @@ No new dependencies.
 - [ ] Attempting to delete a non-existent expense returns 404
 - [ ] A logged-out user attempting to POST to the delete route is redirected to `/login`
 - [ ] The Delete button is visible next to the Edit link in the transaction table on the profile page
-- [ ] Summary stats (total spent, transaction count) update correctly after deletion
+- [ ] Summary stats (total spent, transaction count) update correctly after deletion 
